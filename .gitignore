@@ -1,0 +1,8 @@
+# Backend Ignores
+SERVER/database_test.sqlite
+SERVER/node_modules/
+SERVER/coverage/
+# Frontend Ignores
+node_modules
+coverage
+.idea
