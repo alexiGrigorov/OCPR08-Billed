@@ -1,17 +1,17 @@
-export const localStorageMock = (function() {
+export const localStorageMock = (function () {
   let store = {};
   return {
-    getItem: function(key) {
-      return JSON.stringify(store[key])
+    getItem: function (key) {
+      return JSON.stringify(store[key]);
     },
-    setItem: function(key, value) {
-      store[key] = value.toString()
+    setItem: function (key, value) {
+      store[key] = value.toString();
     },
-    clear: function() {
-      store = {}
+    clear: function () {
+      store = {};
     },
-    removeItem: function(key) {
-      delete store[key]
-    }
-  }
-})()
+    removeItem: function (key) {
+      delete store[key];
+    },
+  };
+})();

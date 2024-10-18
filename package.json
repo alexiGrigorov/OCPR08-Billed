@@ -1,5 +1,7 @@
 {
   "scripts": {
+    "restart": "npm --prefix SERVER run run:dev",
+    "start": "live-server --ignorePattern=/SERVER/",
     "test": "jest --coverage --noStackTrace --silent --testPathIgnorePatterns=/SERVER/"
   },
   "jest": {

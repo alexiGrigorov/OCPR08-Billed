@@ -7,7 +7,7 @@ Débuggez et testez un SaaS RH
 ### API :
 
 ```
-npm --prefix SERVER run run:dev
+npm restart
 ```
 
 L'api est accessible sur le port `5678` en local, c'est à dire `http://localhost:5678`
@@ -17,7 +17,7 @@ L'api est accessible sur le port `5678` en local, c'est à dire `http://localhos
 ### Lancez l'application :
 
 ```
-$ live-server
+npm start
 ```
 
 ## Utilisateurs par défaut:
