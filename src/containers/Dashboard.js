@@ -154,13 +154,13 @@ export default class {
       this.counter++;
     }
 
-    bills.forEach((bill) => {
+    // BUG #4: Attach the event listener only to the bills that are associated with the index and not to all the open ones.
+    // Prevents having multiple (same) event listeners running on the same element.
+    filteredBills(bills, getStatus(this.index)).forEach((bill) => {
       $(`#open-bill${bill.id}`).click((e) =>
         this.handleEditTicket(e, bill, bills)
       );
     });
-
-    return bills;
   }
 
   getBillsAllUsers = () => {
