@@ -19,10 +19,21 @@ export default class NewBill {
   }
   handleChangeFile = (e) => {
     e.preventDefault();
-    const file = this.document.querySelector(`input[data-testid="file"]`)
-      .files[0];
+    const fileInput = this.document.querySelector(`input[data-testid="file"]`);
+    const file = fileInput.files[0];
     const filePath = e.target.value.split(/\\/g);
     const fileName = filePath[filePath.length - 1];
+
+    // BUG #3: Don't allow files with extensions other than jpg, jpeg, and png
+    // also added a fileInput variable at the top of the function
+    const fileExtension = fileName.split(".").pop().toLowerCase();
+    const allowedExtensions = ["jpg", "jpeg", "png"];
+    if (!allowedExtensions.includes(fileExtension)) {
+      alert("Only jpg, jpeg, and png files are allowed.");
+      fileInput.value = ""; // Clear the file input
+      return;
+    }
+
     const formData = new FormData();
     const email = JSON.parse(localStorage.getItem("user")).email;
     formData.append("file", file);
