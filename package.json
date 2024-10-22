@@ -1,10 +1,16 @@
 {
   "scripts": {
     "restart": "npm --prefix SERVER run run:dev",
-    "start": "live-server --ignorePattern=/SERVER/",
-    "test": "jest --coverage --noStackTrace --silent --testPathIgnorePatterns=/SERVER/"
+    "start": "live-server --ignore=coverage/,DOCS/,SERVER/,src/__tests__/,src/__mocks__/",
+    "test": "jest --coverage --noStackTrace --silent"
   },
   "jest": {
+    "coveragePathIgnorePatterns": [
+      "SERVER/"
+    ],
+    "testPathIgnorePatterns": [
+      "SERVER/"
+    ],
     "verbose": false,
     "setupFiles": [
       "./setup-jest.js"
