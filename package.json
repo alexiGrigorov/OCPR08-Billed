@@ -2,8 +2,7 @@
   "scripts": {
     "restart": "npm --prefix SERVER run run:dev",
     "start": "live-server --ignorePattern=\"/(coverage|DOCS|node_modules|SERVER|src/__tests__|src/__mocks__)/\"",
-    "tests": "jest --coverage --noStackTrace --silent",
-    "test": "jest src/__tests__/Bills.js --coverage --noStackTrace --silent=false"
+    "test": "jest --coverage --noStackTrace --silent"
   },
   "jest": {
     "coveragePathIgnorePatterns": [

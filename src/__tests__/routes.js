@@ -63,7 +63,7 @@ describe("Given I am connected and I am on some page of the app", () => {
     });
   });
   describe("When I navigate to anywhere else other than Login, Bills, NewBill, Dashboard", () => {
-    test("Then, it should render Loginpage", () => {
+    test("Then, it should render Login page", () => {
       const pathname = "/anywhere-else";
       const html = ROUTES({
         pathname,
