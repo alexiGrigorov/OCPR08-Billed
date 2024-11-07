@@ -2,102 +2,136 @@
  * @jest-environment jsdom
  */
 
-import { screen, waitFor, fireEvent } from "@testing-library/dom";
+import { screen, waitFor, fireEvent, within } from "@testing-library/dom";
 
 import { localStorageMock } from "../__mocks__/localStorage.js";
 import storeMock from "../__mocks__/store.js";
-import { bills } from "../fixtures/bills.js";
+import { bills as mockedBills } from "../fixtures/bills.js";
 
-import { ROUTES, ROUTES_PATH } from "../constants/routes.js";
+import { ROUTES_PATH } from "../constants/routes.js";
 import router from "../app/Router.js";
 import { formatDate, formatStatus } from "../app/format.js";
 import BillsUI from "../views/BillsUI.js";
 
 import Bills from "../containers/Bills.js";
+import store from "../__mocks__/store.js";
 
-beforeAll(() => {
+describe("Given I am connected as an employee on the Bills page", () => {
   Object.defineProperty(window, "localStorage", { value: localStorageMock });
   window.localStorage.setItem("user", JSON.stringify({ type: "Employee" }));
-});
 
-describe("Unit tests - Bills", () => {
-  describe("getBills", () => {
-    let billsContainer;
-    beforeEach(() => {
-      billsContainer = new Bills({
-        document: document,
-        onNavigate: null,
-        store: storeMock,
-        localStorage: localStorageMock,
+  let bills;
+  let newBill;
+  let iconEyes;
+
+  beforeEach(() => {
+    document.body.innerHTML = BillsUI({
+      data: mockedBills,
+    });
+    newBill = screen.getByTestId("btn-new-bill");
+    iconEyes = screen.getAllByTestId("icon-eye");
+
+    bills = new Bills({
+      document,
+      onNavigate: jest.fn(),
+      store: storeMock,
+      localStorage: window.localStorage,
+    });
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks(); // Restore all mocks
+  });
+
+  describe("Unit tests", () => {
+    describe("handleClickNewBill", () => {
+      it("should call onNavigate with the newBill route", () => {
+        bills.handleClickNewBill();
+        expect(bills.onNavigate).toHaveBeenCalledWith(ROUTES_PATH["NewBill"]);
       });
     });
-    test("should return an array of formatted bills", async () => {
-      const storeBills = await billsContainer.getBills();
-      expect(storeBills).toEqual(
-        bills.map((bill) => ({
-          ...bill,
-          date: formatDate(bill.date),
-          status: formatStatus(bill.status),
-        }))
-      );
+
+    describe("handleClickIconEye", () => {
+      it("should display the modal with the correct image", async () => {
+        $.fn.modal = jest.fn(); // Mock jQuery modal function
+
+        for (const iconEye of iconEyes) {
+          const billUrl = iconEye.getAttribute("data-bill-url");
+          fireEvent.click(iconEye);
+
+          await waitFor(() => expect($.fn.modal).toHaveBeenCalled());
+          const modalBody = document.querySelector("#modaleFile .modal-body");
+          const imgElement = modalBody.querySelector("img");
+
+          expect(imgElement.getAttribute("src")).toBe(billUrl);
+
+          $.fn.modal.mockReset();
+        }
+      });
     });
-    describe("in case of corrupted data, ", () => {
-      let billsWithCorruptedEntries;
-      let storeBills;
-      let consoleLogSpy;
-      beforeEach(async () => {
-        billsWithCorruptedEntries = [
-          bills[0],
-          bills[1],
-          { ...bills[2], date: "2022-13-01" },
-          { ...bills[3], date: "2022-01-32" },
+
+    describe("getBills", () => {
+      it("should return an array of formatted bills", async () => {
+        const storeBills = await bills.getBills();
+        const formattedMockedBills = mockedBills
+          .map((bill) => ({
+            ...bill,
+            date: formatDate(bill.date),
+            status: formatStatus(bill.status),
+          }))
+          .sort((a, b) => a.id.localeCompare(b.id));
+
+        expect(storeBills.sort((a, b) => a.id.localeCompare(b.id))).toEqual(
+          formattedMockedBills
+        );
+      });
+
+      it("should handle corrupted data by loging the error and returning the unformatted date", async () => {
+        const storeBills = await storeMock.bills().list();
+        const storeBillsWithCorruptedData = [
+          storeBills[0],
+          storeBills[1],
+          { ...storeBills[2], date: "2022-13-01" },
+          { ...storeBills[3], date: "2022-01-32" },
         ];
-        billsContainer.store = {
-          bills: () => ({
-            list: () => Promise.resolve(billsWithCorruptedEntries),
-          }),
-        };
-        consoleLogSpy = jest.spyOn(console, "log");
-        storeBills = await billsContainer.getBills();
-      });
-      test("should return an array of where the corrupted entries have unformatted dates", async () => {
-        expect(storeBills).toEqual([
+
+        jest
+          .spyOn(bills.store.bills(), "list")
+          .mockResolvedValue(storeBillsWithCorruptedData);
+        const consoleSpy = jest.spyOn(console, "log");
+
+        const result = await bills.getBills();
+
+        expect(consoleSpy).toHaveBeenCalledTimes(3); // 2 for the corrupted entries, 1 for the length
+        expect(result).toEqual([
           {
-            ...bills[0],
-            date: formatDate(bills[0].date),
-            status: formatStatus(bills[0].status),
+            ...storeBills[0],
+            date: formatDate(storeBills[0].date),
+            status: formatStatus(storeBills[0].status),
           },
           {
-            ...bills[1],
-            date: formatDate(bills[1].date),
-            status: formatStatus(bills[1].status),
+            ...storeBills[1],
+            date: formatDate(storeBills[1].date),
+            status: formatStatus(storeBills[1].status),
           },
           {
-            ...bills[2],
+            ...storeBills[2],
             date: "2022-13-01",
-            status: formatStatus(bills[2].status),
+            status: formatStatus(storeBills[2].status),
           },
           {
-            ...bills[3],
+            ...storeBills[3],
             date: "2022-01-32",
-            status: formatStatus(bills[3].status),
+            status: formatStatus(storeBills[3].status),
           },
         ]);
       });
-      test("should log the error to the console", () => {
-        expect(consoleLogSpy).toHaveBeenCalledTimes(3); // 2 for the corrupted entries, 1 for the length
-      });
-      afterEach(() => {
-        consoleLogSpy.mockRestore();
-      });
     });
   });
-});
 
-describe("Given I am connected as an employee", () => {
-  describe("When I am on Bills Page", () => {
+  describe("Integration tests", () => {
     describe("When the page has loaded", () => {
-      test("Then bill icon in vertical layout should be highlighted", async () => {
+      it("should have the bill icon in vertical layout be highlighted", async () => {
         document.body.innerHTML = "";
         const root = document.createElement("div");
         root.setAttribute("id", "root");
@@ -109,8 +143,44 @@ describe("Given I am connected as an employee", () => {
         expect(windowIcon.classList.contains("active-icon")).toBeTruthy();
       });
 
-      test("Then bills should be ordered from earliest to latest", () => {
-        document.body.innerHTML = BillsUI({ data: bills });
+      it("should fetch and display the bills from the store", async () => {
+        const storeBills = await store.bills().list();
+        const formattedStoreBills = storeBills
+          .map((bill) => ({
+            ...bill,
+            date: formatDate(bill.date),
+            status: formatStatus(bill.status),
+          }))
+          .sort((a, b) => a.id.localeCompare(b.id));
+
+        document.body.innerHTML = BillsUI({
+          data: await bills.getBills(),
+        });
+
+        const rows = screen.getAllByRole("row").slice(1); // Skip the header row
+
+        expect(rows.length).toBe(formattedStoreBills.length);
+
+        formattedStoreBills.forEach((bill) => {
+          const row = rows.find((r) => {
+            const [type, name, date, amount, status] =
+              within(r).getAllByRole("cell");
+
+            return (
+              type.innerHTML === bill.type &&
+              name.innerHTML === bill.name &&
+              date.innerHTML === bill.date &&
+              amount.innerHTML === `${bill.amount} €` &&
+              status.innerHTML === bill.status
+            );
+          });
+
+          expect(row).toBeTruthy();
+        });
+      });
+
+      it("should have the bills be ordered from earliest to latest", () => {
+        console.log(document.body.innerHTML);
         const dates = screen
           .getAllByText(
             /^(19|20)\d\d[- /.](0[1-9]|1[012])[- /.](0[1-9]|[12][0-9]|3[01])$/i
@@ -121,72 +191,30 @@ describe("Given I am connected as an employee", () => {
         expect(dates).toEqual(datesSorted);
       });
     });
-    describe("I can do the following actions: ", () => {
-      describe("When I click on the New Bill button, ", () => {
-        test("When I click on the New Bill button, I should be redirected to the New Bill page", () => {
-          document.body.innerHTML = BillsUI({ data: [] });
-          const onNavigate = (pathname) => {
-            document.body.innerHTML = ROUTES({ pathname });
-          };
-          const billsContainer = new Bills({
-            document,
-            onNavigate,
-            firestore: null,
-            localStorage: window.localStorage,
-          });
-          const handleClickNewBill = jest.fn(billsContainer.handleClickNewBill);
-          const newBillButton = screen.getByTestId("btn-new-bill");
-          newBillButton.addEventListener("click", handleClickNewBill);
-          fireEvent.click(newBillButton);
-          expect(handleClickNewBill).toHaveBeenCalled();
-          expect(screen.getByText("Envoyer une note de frais")).toBeTruthy();
-        });
+
+    describe("When I click on the new bill button", () => {
+      it("should navigagte to the new bill form", async () => {
+        fireEvent.click(newBill);
+        expect(bills.onNavigate).toHaveBeenCalledWith(ROUTES_PATH["NewBill"]);
       });
+    });
 
-      describe("When I click on an eye icon, ", () => {
-        let billsContainer;
-        let eyeIcons;
-        let onNavigate;
+    describe("When I click on an eye icon", () => {
+      it("should display the modal with the correct image", async () => {
+        $.fn.modal = jest.fn(); // Mock jQuery modal function
 
-        beforeEach(() => {
-          document.body.innerHTML = BillsUI({ data: bills });
-          onNavigate = (pathname) => {
-            document.body.innerHTML = ROUTES({ pathname });
-          };
-          billsContainer = new Bills({
-            document,
-            onNavigate,
-            firestore: null,
-            localStorage: window.localStorage,
-          });
-          eyeIcons = Array.from(screen.getAllByTestId("icon-eye"));
-        });
+        for (const iconEye of iconEyes) {
+          const billUrl = iconEye.getAttribute("data-bill-url");
+          fireEvent.click(iconEye);
 
-        test("a modal should open", () => {
-          $.fn.modal = jest.fn();
-          const handleClickIconEye = jest.fn(billsContainer.handleClickIconEye);
-          eyeIcons.forEach((icon) => {
-            icon.addEventListener("click", () => handleClickIconEye(icon));
-            fireEvent.click(icon);
-            expect(handleClickIconEye).toHaveBeenCalled();
-            expect($.fn.modal).toHaveBeenCalled();
-          });
-        });
+          await waitFor(() => expect($.fn.modal).toHaveBeenCalled());
+          const modalBody = document.querySelector("#modaleFile .modal-body");
+          const imgElement = modalBody.querySelector("img");
 
-        test("the modal should display the image of the bill", () => {
-          const billUrls = eyeIcons.map((icon) =>
-            icon.getAttribute("data-bill-url")
-          );
+          expect(imgElement.getAttribute("src")).toBe(billUrl);
 
-          eyeIcons.forEach((icon, index) => {
-            fireEvent.click(icon);
-            const modaleFile = document.getElementById("modaleFile");
-            const img = modaleFile.querySelector("img");
-            const decodedSrc = decodeURIComponent(img.src);
-            expect(decodedSrc).toBe(billUrls[index]);
-            document.querySelector("button[data-dismiss='modal']").click();
-          });
-        });
+          $.fn.modal.mockReset();
+        }
       });
     });
   });

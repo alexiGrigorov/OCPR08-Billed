@@ -1,6 +1,6 @@
 {
   "scripts": {
-    "restart": "npm --prefix SERVER run run:dev",
+    "server": "npm --prefix SERVER run run:dev",
     "start": "live-server --ignorePattern=\"/(coverage|DOCS|node_modules|SERVER|src/__tests__|src/__mocks__)/\"",
     "test": "jest --coverage --noStackTrace --silent"
   },
